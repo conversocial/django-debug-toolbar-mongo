@@ -102,7 +102,6 @@ table.mongo-op-table tbody {
         <tr>
             <th>Time (ms)</th>
             <th style="width: 100%">Document</th>
-            <th>Safe</th>
             <th>Stack Trace</th>
         </tr>
     </thead>
@@ -113,7 +112,6 @@ table.mongo-op-table tbody {
                 <td>
                     <pre class="mongo-highlight">{{ insert.document|format_dict:120|highlight:"javascript"|safe }}</pre>
                 </td>
-                <td>{{ insert.safe }}</td>
                 <td><a href="javascript:void(0);" class="mongo-toggle-trace" data-row="inserts-{{ forloop.counter }}">Toggle</a></td>
             </tr>
             <tr class="{% cycle 'djDebugOdd' 'djDebugEven' %}">
@@ -155,7 +153,6 @@ table.mongo-op-table tbody {
             <th>Time (ms)</th>
             <th>Query</th>
             <th style="width: 100%">Update</th>
-            <th>Safe</th>
             <th>Multi</th>
             <th>Upsert</th>
             <th>Stack Trace</th>
@@ -171,7 +168,6 @@ table.mongo-op-table tbody {
                 <td>
                     <pre class="mongo-highlight">{{ update.document|format_dict:120|highlight:"javascript"|safe }}</pre>
                 </td>
-                <td>{{ update.safe }}</td>
                 <td>{{ update.multi }}</td>
                 <td>{{ update.upsert }}</td>
                 <td><a href="javascript:void(0);" class="mongo-toggle-trace" data-row="updates-{{ forloop.counter }}">Toggle</a></td>
@@ -214,7 +210,6 @@ table.mongo-op-table tbody {
         <tr>
             <th>Time (ms)</th>
             <th style="width: 100%">Query / Id</th>
-            <th>Safe</th>
             <th>Stack Trace</th>
         </tr>
     </thead>
@@ -225,7 +220,6 @@ table.mongo-op-table tbody {
                 <td>
                     <pre class="mongo-highlight">{{ remove.spec_or_id|format_dict:120|highlight:"javascript"|safe }}</pre>
                 </td>
-                <td>{{ remove.safe }}</td>
                 <td><a href="javascript:void(0);" class="mongo-toggle-trace" data-row="removes-{{ forloop.counter }}">Toggle</a></td>
             </tr>
             <tr class="{% cycle 'djDebugOdd' 'djDebugEven' %}">
