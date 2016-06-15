@@ -20,6 +20,7 @@ _original_methods = {
     'update': pymongo.collection.Collection.update,
     'remove': pymongo.collection.Collection.remove,
     'refresh': pymongo.cursor.Cursor._refresh,
+    'aggregate': pymongo.collection.Collection.aggregate,
 }
 
 queries = []
@@ -181,6 +182,27 @@ def _cursor_refresh(cursor_self):
 
     return result
 
+# Wrap Cursor._refresh for getting queries
+@functools.wraps(_original_methods['aggregate'])
+def _aggregate(collection_self, pipeline, **kwargs):
+    start_time = time.time()
+    result = _original_methods['aggregate'](collection_self, pipeline, **kwargs)
+    total_time = (time.time() - start_time) * 1000
+
+    __traceback_hide__ = True
+    queries.append({
+        'collection': collection_self.full_name,
+        'operation': 'aggregate',
+        'query': pipeline,
+        'skip': 0,
+        'limit': None,
+        'time': total_time,
+        'stack_trace': _get_stacktrace(),
+    })
+
+    return result
+
+
 def install_tracker():
     if pymongo.collection.Collection.insert != _insert:
         pymongo.collection.Collection.insert = _insert
@@ -188,6 +210,9 @@ def install_tracker():
         pymongo.collection.Collection.update = _update
     if pymongo.collection.Collection.remove != _remove:
         pymongo.collection.Collection.remove = _remove
+    if pymongo.collection.Collection.aggregate != _aggregate:
+        pymongo.collection.Collection.aggregate = _aggregate
+
     if pymongo.cursor.Cursor._refresh != _cursor_refresh:
         pymongo.cursor.Cursor._refresh = _cursor_refresh
 
@@ -198,6 +223,9 @@ def uninstall_tracker():
         pymongo.collection.Collection.update = _original_methods['update']
     if pymongo.collection.Collection.remove == _remove:
         pymongo.collection.Collection.remove = _original_methods['remove']
+    if pymongo.collection.Collection.aggregate == _aggregate:
+        pymongo.collection.Collection.aggregate = _original_methods['aggregate']
+
     if pymongo.cursor.Cursor._refresh == _cursor_refresh:
         pymongo.cursor.Cursor._refresh = _original_methods['cursor_refresh']
 
@@ -252,4 +280,3 @@ def _tidy_stacktrace(stack):
             text = (''.join(text)).strip()
         trace.append((path, line_no, func_name, text))
     return trace
-
