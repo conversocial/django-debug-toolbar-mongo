@@ -19,8 +19,9 @@ _original_methods = {
     'insert': pymongo.collection.Collection.insert,
     'update': pymongo.collection.Collection.update,
     'remove': pymongo.collection.Collection.remove,
-    'refresh': pymongo.cursor.Cursor._refresh,
     'aggregate': pymongo.collection.Collection.aggregate,
+    'count': pymongo.cursor.Cursor.count,
+    'refresh': pymongo.cursor.Cursor._refresh,
 }
 
 queries = []
@@ -49,7 +50,6 @@ def _get_stacktrace():
         return []
 
 
-# Wrap Cursor._refresh for getting queries
 @functools.wraps(_original_methods['insert'])
 def _insert(collection_self, doc_or_docs, manipulate=True, check_keys=True, **kwargs):
     start_time = time.time()
@@ -70,7 +70,6 @@ def _insert(collection_self, doc_or_docs, manipulate=True, check_keys=True, **kw
     })
     return result
 
-# Wrap Cursor._refresh for getting queries
 @functools.wraps(_original_methods['update'])
 def _update(collection_self, spec, document, upsert=False,
            maniuplate=False, multi=False, **kwargs):
@@ -96,7 +95,6 @@ def _update(collection_self, spec, document, upsert=False,
     })
     return result
 
-# Wrap Cursor._refresh for getting queries
 @functools.wraps(_original_methods['remove'])
 def _remove(collection_self, spec_or_id, **kwargs):
     start_time = time.time()
@@ -114,6 +112,36 @@ def _remove(collection_self, spec_or_id, **kwargs):
         'stack_trace': _get_stacktrace(),
     })
     return result
+
+
+# Wrap Cursor._refresh for getting queries
+@functools.wraps(_original_methods['count'])
+def _cursor_count(cursor_self, *args, **kwargs):
+    # Look up __ private instance variables
+    def privar(name):
+        return getattr(cursor_self, '_Cursor__{0}'.format(name))
+
+    start_time = time.time()
+    result = _original_methods['count'](cursor_self, *args, **kwargs)
+    total_time = (time.time() - start_time) * 1000
+
+    __traceback_hide__ = True
+    query_data = {
+        'time': total_time,
+        'operation': 'count',
+        'stack_trace': _get_stacktrace(),
+    }
+
+    collection = privar('collection')
+    query_data['collection'] = collection.full_name.split('.')[1]
+    query_data['skip'] = 0
+    query_data['limit'] = None
+    query_data['query'] = privar('query_spec')()
+
+    queries.append(query_data)
+
+    return result
+
 
 # Wrap Cursor._refresh for getting queries
 @functools.wraps(_original_methods['refresh'])
@@ -215,6 +243,8 @@ def install_tracker():
 
     if pymongo.cursor.Cursor._refresh != _cursor_refresh:
         pymongo.cursor.Cursor._refresh = _cursor_refresh
+    if pymongo.cursor.Cursor.count != _cursor_count:
+        pymongo.cursor.Cursor.count = _cursor_count
 
 def uninstall_tracker():
     if pymongo.collection.Collection.insert == _insert:
@@ -228,6 +258,8 @@ def uninstall_tracker():
 
     if pymongo.cursor.Cursor._refresh == _cursor_refresh:
         pymongo.cursor.Cursor._refresh = _original_methods['cursor_refresh']
+    if pymongo.cursor.Cursor.count == _cursor_count:
+        pymongo.cursor.Cursor.count = _original_methods['cursor_count']
 
 def reset():
     global queries, inserts, updates, removes
